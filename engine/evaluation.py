@@ -3,11 +3,69 @@
 import logging
 import time
 import random
+from typing import Optional
 
 from engine.search_node import SearchNode
+from engine.error_backtrack import should_error_backtrack
 
 logger = logging.getLogger("MLEvolve")
 
+
+# ---------------------------------------------------------------------------
+# Helpers for Thompson Sampling reward normalization
+# ---------------------------------------------------------------------------
+
+def get_normalized_reward(agent, node: SearchNode) -> float:
+    """Compute a normalized reward in [0, 1] for Thompson Sampling Beta updates.
+
+    Measures performance relative to the global best metric so the signal
+    directly answers "did this branch produce something better than everything
+    seen so far?" — which is what guides branch selection among the small
+    number of draft roots (num_drafts is typically 5).
+
+    Args:
+        agent: AgentSearch instance.
+        node:  The node just evaluated.
+
+    Returns:
+        0.0  for buggy nodes.
+        0.5  when no global best exists yet (neutral prior).
+        1.0  when this node beats the global best.
+        0.6  when this node matches the global best exactly.
+        [0.1, 0.5) when this node is below the global best, scaled by gap.
+    """
+    if node.is_buggy or node.metric is None or node.metric.value is None:
+        return 0.0
+
+    if agent.best_metric is None:
+        return 0.5
+
+    improvement = (
+        node.metric.value - agent.best_metric if node.metric.maximize
+        else agent.best_metric - node.metric.value
+    )
+
+    if improvement > 0:
+        return 1.0
+    elif improvement == 0:
+        return 0.6
+    else:
+        return float(max(0.1, 0.5 + improvement))
+
+
+def _get_branch_root(node: SearchNode) -> Optional[SearchNode]:
+    """Return the branch root: the direct child of the virtual root for this node."""
+    current = node
+    while current.parent is not None and current.parent.stage != "root":
+        current = current.parent
+    if current.parent is not None and current.parent.stage == "root":
+        return current
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Core evaluation functions
+# ---------------------------------------------------------------------------
 
 def backpropagate(node: SearchNode, value: float, add_to_tree=True):
     """Propagate reward up the tree; update debug_success, continue_improve, lock."""
@@ -47,6 +105,25 @@ def get_node_reward(agent, node: SearchNode):
             else:
                 reward += 1
     return reward
+
+
+def _update_thompson_branch(agent, cur_node: SearchNode) -> None:
+    """Update the branch root's Beta distribution with the normalized reward of cur_node.
+
+    Called after a node is evaluated so that Thompson Sampling at the root
+    level learns which branches produce better descendants over time.
+    """
+    if not getattr(agent.scfg, "use_thompson_sampling", False):
+        return
+
+    normalized = get_normalized_reward(agent, cur_node)
+    branch_root = _get_branch_root(cur_node)
+    if branch_root is not None:
+        branch_root.update_thompson(normalized)
+        logger.info(
+            f"[Thompson] Branch root {branch_root.id[:8]} updated with reward={normalized:.3f} "
+            f"(α={branch_root.alpha:.2f}, β={branch_root.beta:.2f})"
+        )
 
 
 def check_improvement(agent, cur_node: SearchNode, parent_node: SearchNode):
@@ -130,6 +207,7 @@ def check_improvement(agent, cur_node: SearchNode, parent_node: SearchNode):
 
                 reward = get_node_reward(agent, cur_node)
                 backpropagate(cur_node, reward)
+                _update_thompson_branch(agent, cur_node)
                 return True
 
     local_best_node = cur_node.local_best_node
@@ -180,7 +258,10 @@ def check_improvement(agent, cur_node: SearchNode, parent_node: SearchNode):
         logger.warning(f"[eval] node {cur_node.id}: improvement=N/A, action=backprop")
         should_backpropagate = True
     else:
-        if cur_node.debug_depth >= agent.scfg.back_debug_depth:
+        # Buggy node: check error backtrack threshold before depth-based backtrack
+        if should_error_backtrack(cur_node, agent):
+            should_backpropagate = True
+        elif cur_node.debug_depth >= agent.scfg.back_debug_depth:
             should_backpropagate = True
             if cur_node.debug_depth >= agent.scfg.max_debug_depth:
                 cur_node.is_terminal = True
@@ -188,6 +269,9 @@ def check_improvement(agent, cur_node: SearchNode, parent_node: SearchNode):
     if should_backpropagate:
         reward = get_node_reward(agent, cur_node)
         backpropagate(cur_node, reward)
-    else:
+
+    _update_thompson_branch(agent, cur_node)
+
+    if not should_backpropagate:
         agent.current_node_list.append(cur_node)
     return should_backpropagate

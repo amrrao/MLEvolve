@@ -58,16 +58,21 @@ def get_impl_guideline(
         "",
         "📁 **Directories**: Input data in `./input/`, submission in `./submission/`, temp files in `./working/`",
         "",
-        f"📦 **Packages & Internet**: numpy, pandas, sklearn, torch, transformers, timm, xgboost, lightgbm (all pre-installed). torch.hub.load(), HuggingFace, etc. available during development."
+        f"📦 **Packages & Internet**: numpy, pandas, sklearn, torch (CPU only), transformers, timm, xgboost, lightgbm (all pre-installed). HuggingFace available during development."
         + (f" Offline models at `{pretrain_model_dir}`" if pretrain_model_dir else ""),
         "",
+        "🖥️ **Hardware: CPU-ONLY environment — NO GPU, NO CUDA available.**",
+        "• ❌ FORBIDDEN: `.cuda()`, `.to('cuda')`, `torch.cuda.*`, `device='cuda'`, CUDA-dependent ops",
+        "• ✅ REQUIRED: Use `device = torch.device('cpu')` or avoid torch entirely",
+        "• ✅ PREFERRED: Use sklearn, lightgbm, xgboost, or classical machine learning CPU models — avoid large deep learning models",
+        "• Large neural networks (ResNet, BERT, ViT, etc.) will be too slow on CPU — use lightweight or classical machine learning models or tree-based methods instead",
+        "",
         "⚠️ **API Compatibility**: LightGBM/XGBoost: ❌ `fit(..., early_stopping_rounds=...)` → ✅ LightGBM: `fit(..., callbacks=[lgb.early_stopping(...)])` ✅ XGBoost: `XGBClassifier(early_stopping_rounds=...)`",
-        "• AdamW: ❌ `from transformers import AdamW` (deprecated) → ✅ `from torch.optim import AdamW`",
         "",
         "🚫 **Execution Guidelines**:",
         "• NO tqdm (not installed), NO verbose=1",
         "• Print only 1 line per epoch (minimize logging)",
-        "• Use DataLoader with num_workers>=2 for speed",
+        "• Use DataLoader with num_workers=0 (CPU environment, multiprocessing causes issues)",
         "",
         "⚠️  **Self-Check Before Finalizing**:",
         "□ Did predictions pass through model's learned weights during inference? (If NO → INVALID)",
@@ -75,6 +80,8 @@ def get_impl_guideline(
         "□ Did I print validation metric as the last line?",
         "□ Did I use the COMPLETE training dataset (not a tiny subset)?",
     ]
+            # "• AdamW: ❌ `from transformers import AdamW` (deprecated) → ✅ `from torch.optim import AdamW`",
+
     if expose_prediction:
         impl_guideline.append(
             "The implementation should include a predict() function, "

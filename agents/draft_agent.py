@@ -140,15 +140,18 @@ def run(agent, init_solution_path: Optional[str] = None) -> SearchNode:
             **Key Techniques**:
             1. **Feature Extractor Pattern**: If dataset is small or domain mismatch exists → Freeze backbone + train only final layers (or feed to XGBoost/SVM).
 
-            2. **Mixed Precision (MANDATORY for pretrained models)**: Use `torch.cuda.amp` (autocast + GradScaler) to save memory. DO NOT manually convert to .half().
+            2. **CPU-ONLY environment**: Do NOT use mixed precision (`torch.cuda.amp`), CUDA, or GPU ops. Use `device = torch.device('cpu')` only. Prefer classical machine learning models or tree-based methods over large neural networks.
 
-            3. **Avoid Timeouts**: #1 cause is slow data loading, NOT GPU model.
-               • Use DataLoader with num_workers>=2, pin_memory=True (NOT raw for loops)
-               • For large datasets + heavy backbones: Extract & cache features to disk (.npy/.h5)
             """
         ]
     else:
         coldstart_guideline = [""]
+
+    
+            # 3. **Avoid Timeouts**: #1 cause is slow data loading and large models on CPU.
+            #    • Use DataLoader with num_workers=0 (CPU environment), avoid pin_memory
+            #    • For large datasets + heavy backbones: Extract & cache features to disk (.npy/.h5)
+            #    • Prefer shallow/fast models — large pretrained models will time out on CPU
 
     prompt["Instructions"]["Implementation guideline"].extend(coldstart_guideline)
     prompt["Instructions"] |= get_prompt_environment()

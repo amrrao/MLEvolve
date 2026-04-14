@@ -48,19 +48,24 @@ def get_closest_run_dir(runs_root: str, exp_name: str) -> Optional[Path]:
     root = Path(runs_root).expanduser().resolve()
     if not root.is_dir():
         return None
-    key = "_".join(exp_name.split("_", 2)[2:])
+    # Format: {comp_id}_{YYYYMMDD}_{HHMMSS}
+    parts = exp_name.split("_", 2)
+    if len(parts) < 3:
+        return None
+    key = parts[0]  # comp_id prefix
     try:
-        input_ts = datetime.strptime(
-            "_".join(exp_name.split("_", 2)[:2]), "%Y%m%d_%H%M%S"
-        )
+        input_ts = datetime.strptime("_".join(parts[1:]), "%Y%m%d_%H%M%S")
     except ValueError:
         return None
     candidates = []
     for d in root.iterdir():
-        if not d.is_dir() or not d.name.endswith(key):
+        if not d.is_dir() or not d.name.startswith(key):
+            continue
+        d_parts = d.name.split("_", 2)
+        if len(d_parts) < 3:
             continue
         try:
-            ts = datetime.strptime("_".join(d.name.split("_", 2)[:2]), "%Y%m%d_%H%M%S")
+            ts = datetime.strptime("_".join(d_parts[1:]), "%Y%m%d_%H%M%S")
         except ValueError:
             continue
         candidates.append((abs((ts - input_ts).total_seconds()), d))

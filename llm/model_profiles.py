@@ -37,8 +37,8 @@ _PROFILES: dict[str, dict] = {
         },
         "non_thinking": {
             # Planner / structured-output calls
-            "temperature": 0.7,
-            "presence_penalty": 0.1,
+            "temperature": 1.0,
+           # "presence_penalty": 0.1,
         },
     },
 

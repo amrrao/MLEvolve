@@ -212,7 +212,7 @@ def _determine_buggy(node: SearchNode, response: dict, has_csv_submission: bool)
 
 
 def _validate_format_with_retry(agent, node: SearchNode):
-    exp_id = agent.cfg.exp_name.split("_")[2]
+    exp_id = agent.cfg.exp_name.split("_")[0]
     submission_path = agent.cfg.workspace_dir / "submission" / f"submission_{node.id}.csv"
 
     status, res = _validate_submission_with_retry(
@@ -249,7 +249,7 @@ def _validate_format_with_retry(agent, node: SearchNode):
 
 
 def _validate_format_simple(agent, node: SearchNode):
-    exp_id = agent.cfg.exp_name.split("_")[2]
+    exp_id = agent.cfg.exp_name.split("_")[0]
     submission_path = agent.cfg.workspace_dir / "submission" / f"submission_{node.id}.csv"
 
     status, res = call_validate(exp_id=exp_id, submission_path=submission_path)

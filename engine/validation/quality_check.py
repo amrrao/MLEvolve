@@ -350,7 +350,7 @@ def llm_suggest_submission_columns(
     cfg: Config,
     sample_path: Path | None = None,
     head_rows: int = 20,
-    temperature: float = 0.0,
+    temperature: float = 1.0,
     max_tokens: int = 20000,
 ) -> list[str] | None:
     """Use LLM to suggest corrected submission column names."""

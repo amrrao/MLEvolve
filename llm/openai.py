@@ -123,7 +123,7 @@ def query(
         "model": model,
         "messages": messages,
         "temperature": profile.get("temperature", filtered.get("temperature", 1.0)),
-        "max_tokens": filtered.get("max_tokens", 16384),
+        "max_completion_tokens": filtered.get("max_tokens", 16384),
     }
     if "top_p" in profile:
         params["top_p"] = profile["top_p"]
@@ -150,7 +150,7 @@ def query(
     message = choice.message
 
     if getattr(choice, "finish_reason", None) == "length":
-        logger.warning(f"Response truncated by max_tokens ({params.get('max_tokens')}), consider increasing it")
+        logger.warning(f"Response truncated by max_completion_tokens ({params.get('max_completion_tokens')}), consider increasing it")
 
     if func_spec is None:
         output = message.content or ""
@@ -214,7 +214,7 @@ def generate(
     prompt: str | dict | list,
     cfg: Config,
     temperature: float | None = None,
-    max_tokens: int | None = None,
+    max_completion_tokens: int | None = None,
     stop_tokens: list[str] | None = None,
     json_schema: dict | None = None,
     max_retries: int = 20,
@@ -245,7 +245,7 @@ def generate(
         "model": model,
         "messages": messages,
         "temperature": profile.get("temperature", temperature if temperature is not None else 1.0),
-        "max_tokens": max_tokens if max_tokens is not None else 16384,
+        "max_completion_tokens": max_completion_tokens if max_completion_tokens is not None else 16384,
         "stream": True,
     }
     if "top_p" in profile:

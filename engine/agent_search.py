@@ -79,6 +79,9 @@ class AgentSearch:
         self.fusion_draft_count = 0
         self.max_fusion_drafts = cfg.agent.max_fusion_drafts
 
+        # Cache for LLM-based error equivalence comparisons (frozenset key → bool)
+        self._error_equiv_cache: dict = {}
+
         self.metric_maximize: bool | None = None
         self.metric_maximize_reasoning: str | None = None
         result_parse_agent.determine_metric_direction(self)
@@ -103,6 +106,16 @@ class AgentSearch:
                 self.global_memory = None
         else:
             logger.info("[AgentSearch] Global memory is disabled by config")
+
+        # Log MCTS configuration
+        error_threshold = getattr(self.scfg, "error_backtrack_threshold", 0)
+        use_thompson = getattr(self.scfg, "use_thompson_sampling", False)
+        if error_threshold and error_threshold > 0:
+            logger.info(f"[MCTS] Error backtrack threshold: {error_threshold} "
+                        f"(LLM equivalence: {getattr(self.scfg, 'use_error_equivalence_check', True)})")
+        else:
+            logger.info("[MCTS] Error backtrack threshold: disabled")
+        logger.info(f"[MCTS] Thompson Sampling: {'enabled' if use_thompson else 'disabled (UCT)'}")
 
     def _serialize_prompt(self, prompt_complete) -> str | None:
         """Serialize prompt (str or dict) to string for saving in node."""

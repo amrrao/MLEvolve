@@ -10,6 +10,36 @@ from engine.conditions import should_trigger_branch_fusion
 logger = logging.getLogger("MLEvolve")
 
 
+def _thompson_select(candidates: List[SearchNode]) -> SearchNode:
+    """Select a branch node by sampling from each node's Beta(alpha, beta) distribution.
+
+    Nodes with a higher average reward (alpha >> beta) are sampled higher most
+    of the time, but uncertainty (low visit count = alpha+beta close to 2) keeps
+    exploration alive for under-visited branches.
+
+    Args:
+        candidates: Non-empty list of unlocked branch-level SearchNodes.
+
+    Returns:
+        The node with the highest sampled value.
+    """
+    best_sample = -1.0
+    best_node = candidates[0]
+    for node in candidates:
+        sample = random.betavariate(node.alpha, node.beta)
+        if sample > best_sample:
+            best_sample = sample
+            best_node = node
+
+    mean = best_node.alpha / (best_node.alpha + best_node.beta)
+    n_eff = best_node.alpha + best_node.beta - 2.0
+    logger.info(
+        f"[Thompson] Selected branch node {best_node.id[:8]} "
+        f"(sample={best_sample:.3f}, μ={mean:.3f}, n={n_eff:.0f})"
+    )
+    return best_node
+
+
 def _piecewise_decay(t, initial_C=1.414, T1=100, T2=200, alpha=0.01, lower_bound=0.7):
     """Piecewise decay: initial_C until T1, linear to lower_bound by T2, then lower_bound."""
     if t < T1:
@@ -45,13 +75,21 @@ def select(agent, node: SearchNode):
             filtered_children = [child for child in n.children if not child.lock]
             selected_node = n
             if len(filtered_children) > 0:
-                selected_node = max(filtered_children,
-                                    key=lambda child: child.uct_value(exploration_constant=C))
+                if getattr(agent.scfg, "use_thompson_sampling", False):
+                    selected_node = _thompson_select(filtered_children)
+                else:
+                    selected_node = max(filtered_children,
+                                        key=lambda child: child.uct_value(exploration_constant=C))
             if selected_node.stage in ["draft", "fusion_draft"]:
                 selected_node.lock = True
             return selected_node
         else:
-            return max(n.children, key=lambda child: child.uct_value(exploration_constant=C))
+            eligible = [child for child in n.children if not child.lock]
+            if not eligible:
+                eligible = n.children  # fall back to all children if all are locked
+            if not eligible:
+                return n  # nothing to select from, return current node
+            return max(eligible, key=lambda child: child.uct_value(exploration_constant=C))
 
     while node and not node.is_terminal:
         if not node.reached_child_limit(scfg=agent.scfg):

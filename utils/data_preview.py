@@ -248,7 +248,7 @@ def clean_task_desc(task_desc: str, cfg) -> str:
             system_message=prompt,
             user_message=None,
             model=acfg.code.model,
-            temperature=0.0,
+            temperature=1.0,
             cfg=cfg
         )
         logger.info(f"Task description cleaned for code review")

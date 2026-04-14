@@ -76,6 +76,13 @@ class SearchConfig:
     fusion_max_time_hours: float
     fusion_min_successful_nodes: int
     fusion_min_branches: int
+    # Error-aware backtracking (AIDE-style)
+    error_backtrack_threshold: int
+    use_error_equivalence_check: bool
+    # Thompson Sampling for branch selection
+    use_thompson_sampling: bool
+    thompson_prior_alpha: float
+    thompson_prior_beta: float
 
 @dataclass
 class AgentConfig:
@@ -195,7 +202,7 @@ def prep_cfg(cfg: Config):
     top_workspace_dir = Path(cfg.workspace_dir).resolve()
     # generate experiment name and prefix with consecutive index
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    cfg.exp_name = f"{timestamp}_{cfg.exp_name or coolname.generate_slug(3)}"
+    cfg.exp_name = f"{cfg.exp_name or coolname.generate_slug(3)}_{timestamp}"
 
     # If log_dir and workspace_dir point to the same path, treat it as a unified
     # "runs" root and place logs/workspace under the per-run directory

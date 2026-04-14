@@ -65,8 +65,8 @@ class SearchNode(DataClassJsonMixin):
     created_time: str = field(default=None, kw_only=True)
 
     # ---- Bayesian sampling ----
-    alpha: int = field(default=1, kw_only=True)
-    beta: int = field(default=1, kw_only=True)
+    alpha: float = field(default=1.0, kw_only=True)
+    beta: float = field(default=1.0, kw_only=True)
 
     # ---- branch management ----
     branch_id: Optional[int] = field(default=None, kw_only=True)
@@ -121,12 +121,25 @@ class SearchNode(DataClassJsonMixin):
 
     
     def update_beta(self, success: bool):
-        if success: 
-            self.alpha += 1
+        if success:
+            self.alpha += 1.0
         else:
-            self.beta += 1
-            
-    def p_mean(self):
+            self.beta += 1.0
+
+    def update_thompson(self, reward: float):
+        """Bayesian update using a continuous reward in [0, 1].
+
+        Higher reward increases alpha (success), lower reward increases beta
+        (failure), so the Beta distribution shifts toward the true expected
+        quality of this branch over time.
+
+        Args:
+            reward: Normalized reward in [0, 1] from get_normalized_reward().
+        """
+        self.alpha += reward
+        self.beta += (1.0 - reward)
+
+    def p_mean(self) -> float:
         return self.alpha / (self.alpha + self.beta)
     
     

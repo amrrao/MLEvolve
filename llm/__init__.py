@@ -98,7 +98,7 @@ def generate(
             prompt=prompt,
             cfg=cfg,
             temperature=temperature,
-            max_tokens=max_tokens,
+            max_completion_tokens=max_tokens,
             stop_tokens=stop_tokens,
             json_schema=json_schema,
             max_retries=max_retries,

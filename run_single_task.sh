@@ -1,11 +1,13 @@
 #!/bin/bash
 # Run MLEvolve on a single competition task.
-# Usage: bash run_single_task.sh <EXP_ID> <DATASET_DIR> [SERVER_ID]
+# Usage: bash run_single_task.sh <EXP_ID> <DATASET_DIR> [SERVER_ID] [START_CPU] [RUNS_ROOT]
 set -x
 
-EXP_ID=${1:?Usage: bash run_single_task.sh <EXP_ID> <DATASET_DIR> [SERVER_ID]}
-dataset_dir=${2:?Usage: bash run_single_task.sh <EXP_ID> <DATASET_DIR> [SERVER_ID]}
+EXP_ID=${1:?Usage: bash run_single_task.sh <EXP_ID> <DATASET_DIR> [SERVER_ID] [START_CPU] [RUNS_ROOT]}
+dataset_dir=${2:?Usage: bash run_single_task.sh <EXP_ID> <DATASET_DIR> [SERVER_ID] [START_CPU] [RUNS_ROOT]}
 SERVER_ID=${3:-111}
+start_cpu=${4:-0}
+RUNS_ROOT=${5:-/mnt/extra/runs}
 
 # ── Proxy (uncomment & fill in if behind a corporate firewall) ──
 # export http_proxy=http://YOUR_PROXY:PORT
@@ -39,9 +41,8 @@ fi
 
 # ── Experiment settings ──
 MEMORY_INDEX=0
-start_cpu=0
-CPUS_PER_TASK=21
-TIME_LIMIT_SECS=43200           # 12 hours
+CPUS_PER_TASK=22
+TIME_LIMIT_SECS=900            # 2 hours
 
 export MEMORY_INDEX
 format_time() {
@@ -50,9 +51,6 @@ format_time() {
 }
 export TIME_LIMIT=$(format_time $TIME_LIMIT_SECS)
 export STEP_LIMIT=500
-
-TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-CLOSEST_EXP_NAME="${TIMESTAMP}_${EXP_ID}"
 
 # ── HuggingFace cache (optional, point to a shared directory) ──
 # export HF_ENDPOINT=https://huggingface.co
@@ -70,9 +68,20 @@ CUDA_VISIBLE_DEVICES=$MEMORY_INDEX timeout --foreground --signal=TERM --kill-aft
   desc_file="${dataset_dir}/${EXP_ID}/prepared/public/description.md" \
   exp_name="${EXP_ID}" \
   start_cpu_id="${start_cpu}" \
-  cpu_number="${CPUS_PER_TASK}"
+  cpu_number="${CPUS_PER_TASK}" \
+  log_dir="${RUNS_ROOT}" \
+  workspace_dir="${RUNS_ROOT}"
 
 RUN_EXIT=$?
+
+# ── Resolve actual experiment directory created by run.py ──
+ACTUAL_EXP_DIR=$(ls -td "${RUNS_ROOT}/${EXP_ID}_"* 2>/dev/null | head -1)
+if [ -z "$ACTUAL_EXP_DIR" ]; then
+    echo "[ERROR] No run directory found matching ${RUNS_ROOT}/${EXP_ID}_*"
+    exit 1
+fi
+CLOSEST_EXP_NAME=$(basename "$ACTUAL_EXP_DIR")
+echo "Resolved experiment directory: ${CLOSEST_EXP_NAME}"
 
 if [ $RUN_EXIT -eq 124 ]; then
   echo "Timed out after $TIME_LIMIT"
@@ -87,4 +96,26 @@ fi
 echo "Running submission fusion ..."
 python utils/submission_fusion_utils.py \
   --task_id "${EXP_ID}" \
-  --exp_name "${CLOSEST_EXP_NAME}"
+  --exp_name "${CLOSEST_EXP_NAME}" \
+  --runs_root "${RUNS_ROOT}"
+
+# Copy best available submission to {run_dir}/submission/submission.csv
+# (the path make_submission.py expects: metadata_path.parent / run_id / "submission/submission.csv")
+# Prefer the ensemble; fall back to best_submission from the agent's own selection.
+WORKSPACE_DIR="${RUNS_ROOT}/${CLOSEST_EXP_NAME}/workspace"
+SUBMISSION_DIR="${RUNS_ROOT}/${CLOSEST_EXP_NAME}/submission"
+ENSEMBLE_DIR="${WORKSPACE_DIR}/ensembles_csv"
+BEST_SUBMISSION_CSV="${WORKSPACE_DIR}/best_submission/submission.csv"
+
+BEST_ENSEMBLE=$(ls -t "${ENSEMBLE_DIR}"/*.csv 2>/dev/null | head -1)
+if [ -n "$BEST_ENSEMBLE" ]; then
+    mkdir -p "${SUBMISSION_DIR}"
+    cp "$BEST_ENSEMBLE" "${SUBMISSION_DIR}/submission.csv"
+    echo "Copied ensemble submission: ${BEST_ENSEMBLE} → ${SUBMISSION_DIR}/submission.csv"
+elif [ -f "$BEST_SUBMISSION_CSV" ]; then
+    mkdir -p "${SUBMISSION_DIR}"
+    cp "$BEST_SUBMISSION_CSV" "${SUBMISSION_DIR}/submission.csv"
+    echo "No ensemble found — copied best_submission/submission.csv → ${SUBMISSION_DIR}/submission.csv"
+else
+    echo "[WARN] No submission CSV found (neither ensemble nor best_submission)"
+fi
