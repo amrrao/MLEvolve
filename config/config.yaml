@@ -27,7 +27,7 @@ pretrain_model_dir: ""  # path to pretrained model weights, e.g. /data/pretrain_
 #  Code execution
 # ============================================================
 exec:
-  timeout: 900
+  timeout: 7200
   agent_file_name: runfile.py
 
 # ============================================================
@@ -37,7 +37,7 @@ agent:
 
   # --- Basic run params ---
   steps: 500
-  time_limit: 900           # 2h
+  time_limit: 7200           # 2h
   initial_drafts: 3
   seed: 42
   data_preview: True
@@ -47,13 +47,13 @@ agent:
     model: gpt-5-mini-2025-08-07
     temp: 1
     base_url: ""   # OpenAI API endpoint (leave empty for default)
-    api_key: ""    # OpenAI API key
+    api_key: "YOUR_API_KEY"    # OpenAI API key
   feedback:
     model: gpt-5-mini-2025-08-07
     temp: 1
     base_url: ""   # OpenAI API endpoint (leave empty for default)
-    api_key: ""    # OpenAI API key
-
+    api_key: "YOUR_API_KEY"    # OpenAI API key
+    
   # --- Submission check ---
   check_data_leakage: True
 

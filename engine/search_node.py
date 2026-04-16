@@ -170,7 +170,7 @@ class SearchNode(DataClassJsonMixin):
                 # expected_child_count includes in-flight children; estimate in-flight drafts
                 in_flight = max(0, self.expected_child_count - len(self.children))
                 regular_expected = regular_draft_count + in_flight
-                logger.info(f"[reached_child_limit] node {self.id} regular_draft_count={regular_draft_count}, in_flight={in_flight}, limit={scfg.num_drafts}")
+                logger.debug(f"[reached_child_limit] node {self.id} regular_draft_count={regular_draft_count}, in_flight={in_flight}, limit={scfg.num_drafts}")
                 return regular_expected >= scfg.num_drafts
             else:
                 if self.is_buggy:

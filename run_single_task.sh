@@ -42,7 +42,7 @@ fi
 # ── Experiment settings ──
 MEMORY_INDEX=0
 CPUS_PER_TASK=22
-TIME_LIMIT_SECS=900            # 2 hours
+TIME_LIMIT_SECS=7200            # 2 hours
 
 export MEMORY_INDEX
 format_time() {

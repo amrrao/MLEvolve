@@ -277,6 +277,7 @@ class AgentSearch:
 
         if result_node and result_node.metric and result_node.metric.value is not None:
             solution_manager.update_best_solution(self, result_node)
+            evaluation._update_thompson_branch(self, result_node)
 
         self.current_step = len(self.journal)
 

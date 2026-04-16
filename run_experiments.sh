@@ -13,7 +13,7 @@ set -uo pipefail
 # ═══════════════════════════════════════════════════════════════
 DATASET_DIR="/home/aa3320/.cache/mle-bench/data"   # e.g. /home/aa3320/llms-for-mle-bench/mle-bench/data
 MLEBENCH_DIR="/home/aa3320/llms-for-mle-bench/mle-bench"
-COMP_LIST="/home/aa3320/llms-for-mle-bench/mle-bench/experiments/splits/short.txt"
+COMP_LIST="/home/aa3320/llms-for-mle-bench/mle-bench/experiments/splits/kaggle_short_list.txt"
 
 # ═══════════════════════════════════════════════════════════════
 #  FIXED SETTINGS

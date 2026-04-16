@@ -207,7 +207,6 @@ def check_improvement(agent, cur_node: SearchNode, parent_node: SearchNode):
 
                 reward = get_node_reward(agent, cur_node)
                 backpropagate(cur_node, reward)
-                _update_thompson_branch(agent, cur_node)
                 return True
 
     local_best_node = cur_node.local_best_node
@@ -269,8 +268,6 @@ def check_improvement(agent, cur_node: SearchNode, parent_node: SearchNode):
     if should_backpropagate:
         reward = get_node_reward(agent, cur_node)
         backpropagate(cur_node, reward)
-
-    _update_thompson_branch(agent, cur_node)
 
     if not should_backpropagate:
         agent.current_node_list.append(cur_node)
