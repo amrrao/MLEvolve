@@ -5,6 +5,10 @@ set -x
 
 SERVER_ID=${1:-111}
 ROOT="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "${ROOT}/.." && pwd)"
+if [[ -x "${REPO_ROOT}/.venv/bin/python" ]]; then
+  export PATH="${REPO_ROOT}/.venv/bin:${PATH}"
+fi
 cd "$ROOT"
 
 dataset_dir=${DATASET_DIR:?Please set DATASET_DIR env var to the mle-bench data root}

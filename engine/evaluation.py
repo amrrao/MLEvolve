@@ -7,6 +7,7 @@ from typing import Optional
 
 from engine.search_node import SearchNode
 from engine.error_backtrack import should_error_backtrack
+from engine.hpo_score import score_hpo
 
 logger = logging.getLogger("MLEvolve")
 
@@ -38,19 +39,24 @@ def get_normalized_reward(agent, node: SearchNode) -> float:
         return 0.0
 
     if agent.best_metric is None:
-        return 0.5
-
-    improvement = (
-        node.metric.value - agent.best_metric if node.metric.maximize
-        else agent.best_metric - node.metric.value
-    )
-
-    if improvement > 0:
-        return 1.0
-    elif improvement == 0:
-        return 0.6
+        base = 0.5
     else:
-        return float(max(0.1, 0.5 + improvement))
+        improvement = (
+            node.metric.value - agent.best_metric if node.metric.maximize
+            else agent.best_metric - node.metric.value
+        )
+        if improvement > 0:
+            base = 1.0
+        elif improvement == 0:
+            base = 0.6
+        else:
+            base = float(max(0.1, 0.5 + improvement))
+
+    # ---- HPO bias for Thompson Sampling (kept in [0,1]) ----
+    # Scale by /3 so the max bonus equals hpo_score_weight, comparable to base.
+    if getattr(agent.scfg, "use_hpo_score", False):
+        base = min(1.0, base + agent.scfg.hpo_score_weight * score_hpo(agent, node) / 3.0)
+    return base
 
 
 def _get_branch_root(node: SearchNode) -> Optional[SearchNode]:
@@ -104,6 +110,13 @@ def get_node_reward(agent, node: SearchNode):
                 reward += 1.5
             else:
                 reward += 1
+
+        # ---- HPO control-loop reward shaping (only successful nodes reach here) ----
+        if getattr(agent.scfg, "use_hpo_score", False):
+            hpo = score_hpo(agent, node)
+            bonus = agent.scfg.hpo_score_weight * hpo
+            reward += bonus
+            logger.info(f"[hpo] node {node.id}: hpo_score={hpo}, bonus={bonus:.3f}")
     return reward
 
 
@@ -127,6 +140,23 @@ def _update_thompson_branch(agent, cur_node: SearchNode) -> None:
 
 
 def check_improvement(agent, cur_node: SearchNode, parent_node: SearchNode):
+    # ---- HPO: eager invocation gated on code execution, not submission success ----
+    # check_improvement runs for every executed node (step + deferred paths), so this
+    # is the one place that guarantees score_hpo is called exactly once per node whose
+    # code ran. Downstream get_node_reward / get_normalized_reward calls hit the id-keyed
+    # cache in hpo_score.py and pick up the bonus without issuing a second LLM call.
+    if getattr(agent.scfg, "use_hpo_score", False):
+        code_ran = (
+            getattr(cur_node, "exc_type", None) is None
+            and bool((getattr(cur_node, "code", "") or "").strip())
+        )
+        logger.info(f"[hpo] evaluating node {cur_node.id}")
+        logger.info(
+            f"[hpo] node success status: code_ran={code_ran}, "
+            f"is_buggy={cur_node.is_buggy}, exc_type={getattr(cur_node, 'exc_type', None)}"
+        )
+        if code_ran:
+            score_hpo(agent, cur_node)
 
     improvement = 0
     should_backpropagate = False

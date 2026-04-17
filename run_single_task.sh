@@ -7,13 +7,20 @@ EXP_ID=${1:?Usage: bash run_single_task.sh <EXP_ID> <DATASET_DIR> [SERVER_ID] [S
 dataset_dir=${2:?Usage: bash run_single_task.sh <EXP_ID> <DATASET_DIR> [SERVER_ID] [START_CPU] [RUNS_ROOT]}
 SERVER_ID=${3:-111}
 start_cpu=${4:-0}
-RUNS_ROOT=${5:-/mnt/extra/runs}
+RUNS_ROOT=${5:-}
 
 # ── Proxy (uncomment & fill in if behind a corporate firewall) ──
 # export http_proxy=http://YOUR_PROXY:PORT
 # export https_proxy=http://YOUR_PROXY:PORT
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "${ROOT}/.." && pwd)"
+if [[ -x "${REPO_ROOT}/.venv/bin/python" ]]; then
+  export PATH="${REPO_ROOT}/.venv/bin:${PATH}"
+fi
+if [[ -z "${RUNS_ROOT}" ]]; then
+  RUNS_ROOT="${ROOT}/experiment_runs"
+fi
 cd "$ROOT"
 
 # ── Launch the local grading (format-validation) server ──
@@ -42,7 +49,7 @@ fi
 # ── Experiment settings ──
 MEMORY_INDEX=0
 CPUS_PER_TASK=22
-TIME_LIMIT_SECS=7200            # 2 hours
+TIME_LIMIT_SECS=1000            # aligned with config.yaml
 
 export MEMORY_INDEX
 format_time() {
@@ -90,6 +97,7 @@ elif [ $RUN_EXIT -eq 130 ]; then
   exit 130
 elif [ $RUN_EXIT -ne 0 ]; then
   echo "Run failed with exit code: $RUN_EXIT"
+  exit "$RUN_EXIT"
 fi
 
 # ── Post-processing: ensemble top solutions ──
@@ -97,7 +105,8 @@ echo "Running submission fusion ..."
 python utils/submission_fusion_utils.py \
   --task_id "${EXP_ID}" \
   --exp_name "${CLOSEST_EXP_NAME}" \
-  --runs_root "${RUNS_ROOT}"
+  --runs_root "${RUNS_ROOT}" \
+  || exit $?
 
 # Copy best available submission to {run_dir}/submission/submission.csv
 # (the path make_submission.py expects: metadata_path.parent / run_id / "submission/submission.csv")

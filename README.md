@@ -45,13 +45,19 @@ MLEvolve powers the **coding and algorithm optimization** module within the [Int
 
 **1. Prepare mle-bench** — Install [mle-bench](https://github.com/openai/mle-bench) and download the dataset following its instructions.
 
-**2. Install MLEvolve dependencies**
+**2. Python environment** — From the repository root (`llms-for-mle-bench/`), create a venv and install packages (system Python on Debian/Ubuntu often has no `pip`; a venv provides it):
 
 ```bash
-pip install --no-deps -r requirements_base.txt
-pip install --no-deps -r requirements_ml.txt
-pip install --no-deps -r requirements_domain.txt  
+python3 -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -U pip setuptools wheel
+pip install -e mle-bench
+pip install -r MLEvolve/requirements_base.txt -r MLEvolve/requirements_ml.txt
 ```
+
+Optional: `pip install -r MLEvolve/requirements_domain.txt` for extra CV/NLP/time-series stacks. AutoGluon is split out as `requirements_ml_optional_autogluon.txt` because it pins `pyarrow<21`, which conflicts with the `datasets` stack in `requirements_ml.txt`.
+
+Shell scripts under `MLEvolve/` prepend `../.venv/bin` to `PATH` when that interpreter exists, so `python` and `mlebench` resolve to the venv without manual activation.
 
 **3. Configure** — Edit `config/config.yaml`, fields you **must** fill in:
 

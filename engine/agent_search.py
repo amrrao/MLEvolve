@@ -8,7 +8,7 @@ from typing import Callable, List, Dict, Optional
 from engine.executor import ExecutionResult
 from engine.search_node import SearchNode, Journal
 import utils.data_preview as data_preview
-from config import Config
+from config import Config, load_additional_notes
 from utils.metric import WorstMetricValue
 import threading
 import json
@@ -39,6 +39,9 @@ class AgentSearch:
         self.acfg = cfg.agent
         self.scfg = cfg.agent.search
         self.task_desc = clean_task_desc(task_desc, cfg)
+        additional_notes = load_additional_notes(cfg)
+        if additional_notes:
+            self.task_desc = f"{self.task_desc}\n\n### Additional Notes\n{additional_notes}"
         self.journal = journal
         self.data_preview: str | None = None
         self.current_step = 0

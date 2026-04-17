@@ -294,7 +294,8 @@ parso==0.8.4
 pathspec==0.12.1
 patsy==1.0.1
 pexpect==4.9.0
-pillow==12.0.0
+# streamlit 1.40.x requires pillow<12; keep compatible with matplotlib
+pillow==11.3.0
 pluggy==1.5.0
 pooch==1.8.2
 portalocker==3.2.0

@@ -83,6 +83,11 @@ class SearchConfig:
     use_thompson_sampling: bool
     thompson_prior_alpha: float
     thompson_prior_beta: float
+    # HPO control-loop scoring
+    use_hpo_score: bool = False
+    hpo_score_weight: float = 0.25
+    # Additional notes injection (prompt-level ablation)
+    use_additional_notes: bool = False
 
 @dataclass
 class AgentConfig:
@@ -227,6 +232,38 @@ def prep_cfg(cfg: Config):
 
 def print_cfg(cfg: Config) -> None:
     rich.print(Syntax(OmegaConf.to_yaml(cfg), "yaml", theme="paraiso-dark"))
+
+
+_ADDITIONAL_NOTES_CANDIDATES = (
+    Path("./additional_notes.txt"),
+    Path("/home/instructions.txt"),
+)
+
+
+def load_additional_notes(cfg: Config) -> str | None:
+    """Load optional additional notes file for prompt-level ablations.
+
+    Returns stripped content, or None if disabled / missing / empty / unreadable.
+    """
+    if not getattr(cfg.agent.search, "use_additional_notes", False):
+        return None
+
+    for candidate in _ADDITIONAL_NOTES_CANDIDATES:
+        try:
+            if not candidate.is_file():
+                continue
+            content = candidate.read_text().strip()
+        except Exception as e:
+            logger.warning(f"[notes] Failed to read {candidate}: {e}")
+            continue
+        if not content:
+            logger.info(f"[notes] {candidate} is empty, skipping")
+            return None
+        logger.info(f"[notes] Loaded {candidate} ({len(content)} chars)")
+        return content
+
+    logger.info("[notes] No additional_notes.txt found")
+    return None
 
 
 def load_task_desc(cfg: Config):

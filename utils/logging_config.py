@@ -26,8 +26,7 @@ def setup_logging(cfg: Any) -> logging.Logger:
     file_handler.setFormatter(logging.Formatter(log_format))
     file_handler.addFilter(VerboseFilter())
 
-    #verbose_file_handler = logging.FileHandler(cfg.log_dir / "MLEvolve.verbose.log")
-    verbose_file_handler = logging.FileHandler("/mnt/extra/logs/MLEvolve.verbose.log")
+    verbose_file_handler = logging.FileHandler(cfg.log_dir / "MLEvolve.verbose.log")
     verbose_file_handler.setFormatter(logging.Formatter(log_format))
 
     console_handler = logging.StreamHandler(sys.stdout)

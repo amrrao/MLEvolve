@@ -11,9 +11,9 @@ set -uo pipefail
 # ═══════════════════════════════════════════════════════════════
 #  USER CONFIGURATION — set these before running
 # ═══════════════════════════════════════════════════════════════
-DATASET_DIR="/home/aa3320/.cache/mle-bench/data"   # e.g. /home/aa3320/llms-for-mle-bench/mle-bench/data
-MLEBENCH_DIR="/home/aa3320/llms-for-mle-bench/mle-bench"
-COMP_LIST="/home/aa3320/llms-for-mle-bench/mle-bench/experiments/splits/kaggle_short_list.txt"
+DATASET_DIR="/home/amrutharao/.cache/mle-bench/data"   # prepared data from mlebench prepare
+MLEBENCH_DIR="/home/amrutharao/llms-for-mle-bench/mle-bench"
+COMP_LIST="/home/amrutharao/llms-for-mle-bench/mle-bench/experiments/splits/kaggle_short_list.txt"
 
 # ═══════════════════════════════════════════════════════════════
 #  FIXED SETTINGS
@@ -23,8 +23,14 @@ CPUS_PER_TASK=22
 BASE_SERVER_ID=100   # tasks get server IDs 100–108
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
-RUNS_DIR="/mnt/extra/runs"
-ORCH_LOG_DIR="/mnt/extra/logs/orchestration"
+# Prefer Python deps from repo-root .venv (see README / pip install -r requirements_*.txt)
+REPO_ROOT="$(cd "${ROOT}/.." && pwd)"
+if [[ -x "${REPO_ROOT}/.venv/bin/python" ]]; then
+  export PATH="${REPO_ROOT}/.venv/bin:${PATH}"
+fi
+# Writable defaults (override if you use a large scratch disk, e.g. /mnt/extra/runs)
+RUNS_DIR="${RUNS_DIR:-${ROOT}/experiment_runs}"
+ORCH_LOG_DIR="${ORCH_LOG_DIR:-${ROOT}/logs/orchestration}"
 
 # ═══════════════════════════════════════════════════════════════
 #  PREFLIGHT CHECKS

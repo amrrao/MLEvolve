@@ -60,18 +60,7 @@ pytorch-tabnet==4.1.0
 hyperopt==0.2.7
 bayesian-optimization==2.0.3
 
-
-autogluon==1.4.0
-autogluon.common==1.4.0
-autogluon.core==1.4.0
-autogluon.features==1.4.0
-autogluon.multimodal==1.4.0
-autogluon.tabular==1.4.0
-autogluon.timeseries==1.4.0
 optuna==4.2.1
-optuna-integration==4.3.0
-ray==2.44.1
-
 
 onnx==1.18.0
 onnxruntime==1.22.0
