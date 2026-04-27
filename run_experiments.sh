@@ -40,6 +40,13 @@ if [ -z "$DATASET_DIR" ]; then
     exit 1
 fi
 
+if [ -z "${OPENAI_API_KEY:-}" ]; then
+    echo "ERROR: OPENAI_API_KEY is not set. Export it before running, e.g.:"
+    echo "  export OPENAI_API_KEY=sk-..."
+    exit 1
+fi
+export OPENAI_API_KEY
+
 if [ ! -f "$COMP_LIST" ]; then
     echo "ERROR: Competition list not found at: ${COMP_LIST}"
     exit 1

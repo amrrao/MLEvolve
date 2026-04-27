@@ -9,6 +9,13 @@ SERVER_ID=${3:-111}
 start_cpu=${4:-0}
 RUNS_ROOT=${5:-}
 
+if [ -z "${OPENAI_API_KEY:-}" ]; then
+    echo "ERROR: OPENAI_API_KEY is not set. Export it before running, e.g.:"
+    echo "  export OPENAI_API_KEY=sk-..."
+    exit 1
+fi
+export OPENAI_API_KEY
+
 # ── Proxy (uncomment & fill in if behind a corporate firewall) ──
 # export http_proxy=http://YOUR_PROXY:PORT
 # export https_proxy=http://YOUR_PROXY:PORT
